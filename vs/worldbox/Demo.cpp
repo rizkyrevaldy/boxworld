@@ -118,7 +118,8 @@ void Demo::Render() {
 	glViewport(0, 0, this->screenWidth, this->screenHeight);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glFlush();
+	glClearColor((float)181/255, (float)218/255, (float)244/255, (float)1/255);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -133,12 +134,12 @@ void Demo::Render() {
 	glm::mat4 view = glm::lookAt(glm::vec3(posCamX, posCamY, posCamZ), glm::vec3(viewCamX, viewCamY, viewCamZ), glm::vec3(upCamX, upCamY, upCamZ));
 	GLint viewLoc = glGetUniformLocation(this->shaderProgram, "view");
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-
+	
 	DrawColoredCube();
 
 	DrawColoredPlane();
 
-	DrawColoredSky();
+	//DrawColoredSky();
 
 	glDisable(GL_DEPTH_TEST);
 }
