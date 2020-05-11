@@ -267,13 +267,28 @@ void Demo::DrawColoredCube()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
+	glBindVertexArray(VAO);
 
 	glm::mat4 model;
 	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	model = glm::translate(model, glm::vec3(0, 0, 0));
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-	glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	glm::mat4 ogmodel = model;
+	GLint ogML = modelLoc;
+	for (int i = 1; i <= 5; i++) {
+		model = glm::translate(model, glm::vec3(5, 0, -5));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	}
+	model = ogmodel;
+	modelLoc = ogML;
+	for (int i = 1; i <= 5; i++) {
+		model = glm::translate(model, glm::vec3(-5, 0, -5));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	}
+
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
 }
@@ -381,13 +396,28 @@ void Demo::DrawColoredCube1()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texture4);
 	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
-
-	glBindVertexArray(VAO4); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+	glBindVertexArray(VAO4);
 
 	glm::mat4 model;
 	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	model = glm::translate(model, glm::vec3(0, 0, 0));
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	glm::mat4 ogmodel = model;
+	GLint ogML = modelLoc;
+	for (int i = 1; i <= 5; i++) {
+		model = glm::translate(model, glm::vec3(5, 0, -5));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	}
+	model = ogmodel;
+	modelLoc = ogML;
+	for (int i = 1; i <= 5; i++) {
+		model = glm::translate(model, glm::vec3(-5, 0, -5));
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	}
+
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
