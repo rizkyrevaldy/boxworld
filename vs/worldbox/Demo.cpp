@@ -1,6 +1,6 @@
 #include "Demo.h"
-
-
+#include <cstdlib>
+#include <ctime>
 
 Demo::Demo() {
 
@@ -36,6 +36,18 @@ void Demo::DeInit() {
 	glDeleteVertexArrays(1, &VAO);
 	glDeleteBuffers(1, &VBO);
 	glDeleteBuffers(1, &EBO);
+	glDeleteVertexArrays(1, &VAO2);
+	glDeleteBuffers(1, &VBO2);
+	glDeleteBuffers(1, &EBO2);
+	glDeleteVertexArrays(1, &VAO3);
+	glDeleteBuffers(1, &VBO3);
+	glDeleteBuffers(1, &EBO3);
+	glDeleteVertexArrays(1, &VAO4);
+	glDeleteBuffers(1, &VBO4);
+	glDeleteBuffers(1, &EBO4);
+	glDeleteVertexArrays(1, &VAO5);
+	glDeleteBuffers(1, &VBO5);
+	glDeleteBuffers(1, &EBO5);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -115,7 +127,7 @@ void Demo::ProcessInput(GLFWwindow *window) {
 }
 
 void Demo::Update(double deltaTime) {
-	
+	//angle += (float)((deltaTime * 1.5f) / 1000);
 }
 
 void Demo::Render() {
@@ -256,6 +268,9 @@ void Demo::DrawColoredCube()
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
 
+	glm::mat4 model;
+	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
@@ -357,6 +372,25 @@ void Demo::BuildColoredCube1() {
 	// remember: do NOT unbind the EBO while a VAO is active as the bound element buffer object IS stored in the VAO; keep the EBO bound.
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+}
+
+void Demo::DrawColoredCube1()
+{
+	glUseProgram(shaderProgram);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture4);
+	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
+
+	glBindVertexArray(VAO4); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+
+	glm::mat4 model;
+	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindVertexArray(0);
 }
 
 void Demo::BuildColoredClouds() {
@@ -465,29 +499,61 @@ void Demo::DrawColoredClouds()
 
 	glBindVertexArray(VAO5); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
-	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-	//glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0, 2);
+	glm::mat4 model;
+	GLint modelLoc;
+	model = glm::translate(model, glm::vec3(0, 0, 0));
+	modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+	glm::mat4 ogmodel = model;
+	GLint ogML = modelLoc;
+
+	/*for (int i = -50; i <= 50; i += 5) {
+		model = glm::translate(model, glm::vec3(i, 0, 0));
+
+		//model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
+
+		//model = glm::scale(model, glm::vec3(3, 3, 3));
+
+		modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		for (int j = 0; j <= 50; j += 5) {
+			model = glm::translate(model, glm::vec3(-5, 0, -5));
+
+			//model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
+
+			//model = glm::scale(model, glm::vec3(3, 3, 3));
+
+			modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		}
+		model = ogmodel;
+		modelLoc = ogML;
+	}*/
+
+	srand(time(NULL)/10);
+	for (int i = 0; i < 100; i++) {
+		float x = (rand() % (50 + 1 - -50) + -50);
+		float y = (rand() % (5 + 1 - -1) + -1);
+		float z = (rand() % (20 + 1 - -50) + -50);
+		//float sx= (rand() % (3 + 1 - -3) + -3);
+		//float sy = (rand() % (3 + 1 - -3) + -3);
+		//float sz = (rand() % (3 + 1 - -3) + -3);
+		model = glm::translate(model, glm::vec3(x, y, z));
+		//model = glm::scale(model, glm::vec3(sx, sy, sz));
+		modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+	}
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindVertexArray(0);
-}
 
-void Demo::DrawColoredCube1()
-{
-	glUseProgram(shaderProgram);
+	}
+	
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture4);
-	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
 
-	glBindVertexArray(VAO4); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-
-	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindVertexArray(0);
-	glTranslatef(-1.5f, 0, 0);
-}
 void Demo::BuildColoredPlane()
 {
 	// Load and create a texture 
@@ -554,6 +620,9 @@ void Demo::DrawColoredPlane()
 
 	glBindVertexArray(VAO2); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
+	glm::mat4 model;
+	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
