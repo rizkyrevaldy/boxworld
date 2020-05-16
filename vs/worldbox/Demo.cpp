@@ -804,5 +804,5 @@ void Demo::RotateCamera(float speed)
 
 int main(int argc, char** argv) {
 	RenderEngine &app = Demo();
-	app.Start("Camera: Free Camera Implementation", 800, 600, false, true);
+	app.Start("Camera: Free Camera Implementation", 1280, 720, false, true);
 }
