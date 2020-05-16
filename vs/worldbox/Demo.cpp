@@ -16,6 +16,9 @@ void Demo::Init() {
 	// build and compile our shader program
 	// ------------------------------------
 	shaderProgram = BuildShader("vertexShader.vert", "fragmentShader.frag", nullptr);
+	shadowmapShader = BuildShader("shadowMap.vert", "shadowMap.frag", nullptr);
+	depthmapShader = BuildShader("depthMap.vert", "depthMap.frag", nullptr);
+	BuildDepthMap();
 
 	BuildColoredCube();
 
@@ -48,6 +51,7 @@ void Demo::DeInit() {
 	glDeleteVertexArrays(1, &VAO5);
 	glDeleteBuffers(1, &VBO5);
 	glDeleteBuffers(1, &EBO5);
+	glDeleteBuffers(1, &depthMapFBO);
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
@@ -127,37 +131,80 @@ void Demo::ProcessInput(GLFWwindow *window) {
 }
 
 void Demo::Update(double deltaTime) {
-	//angle += (float)((deltaTime * 1.5f) / 1000);
+	
 }
 
 void Demo::Render() {
-	glViewport(0, 0, this->screenWidth, this->screenHeight);
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glFlush();
-	glClearColor((float)181/255, (float)218/255, (float)244/255, (float)1/255);
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
+	
 	glEnable(GL_DEPTH_TEST);
+	
+	glClearColor((float)181 / 255, (float)218 / 255, (float)244 / 255, (float)1 / 255);
+
+	glm::mat4 lightProjection, lightView;
+	glm::mat4 lightSpaceMatrix;
+	float near_plane = 1.0f, far_plane = 7.5f;
+	lightProjection = glm::ortho(-50.0f, 50.0f, -50.0f, 50.0f, near_plane, far_plane);
+	lightView = glm::lookAt(glm::vec3(-10.0f, 5.0f, 30.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0, 1.0, 0.0));
+	lightSpaceMatrix = lightProjection * lightView;
+	// render scene from light's point of view
+	UseShader(this->depthmapShader);
+	glUniformMatrix4fv(glGetUniformLocation(this->depthmapShader, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+	glViewport(0, 0, this->SHADOW_WIDTH, this->SHADOW_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	DrawColoredCube(this->depthmapShader);
+	DrawColoredCube1(this->depthmapShader);
+	DrawColoredPlane(this->depthmapShader);
+	DrawColoredClouds(this->depthmapShader);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	
+	
+
+	glViewport(0, 0, this->screenWidth, this->screenHeight);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Pass perspective projection matrix
+	UseShader(this->shadowmapShader);
 	glm::mat4 projection = glm::perspective(fovy, (GLfloat)this->screenWidth / (GLfloat)this->screenHeight, 0.1f, 100.0f);
-	GLint projLoc = glGetUniformLocation(this->shaderProgram, "projection");
+	GLint projLoc = glGetUniformLocation(this->shadowmapShader, "projection");
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
+	
 	// LookAt camera (position, target/direction, up)
 	glm::mat4 view = glm::lookAt(glm::vec3(posCamX, posCamY, posCamZ), glm::vec3(viewCamX, viewCamY, viewCamZ), glm::vec3(upCamX, upCamY, upCamZ));
-	GLint viewLoc = glGetUniformLocation(this->shaderProgram, "view");
+	GLint viewLoc = glGetUniformLocation(this->shadowmapShader, "view");
 	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+	glUniformMatrix4fv(glGetUniformLocation(this->shadowmapShader, "lightSpaceMatrix"), 1, GL_FALSE, glm::value_ptr(lightSpaceMatrix));
+	glUniform3f(glGetUniformLocation(this->shadowmapShader, "viewPos"),posCamX, posCamY, posCamZ);
+	glUniform3f(glGetUniformLocation(this->shadowmapShader, "lightPos"), -10.0f, 5.0f, 30.0f);
+	glUniform1i(glGetUniformLocation(this->shadowmapShader, "diffuseTexture"), 0);
+	glUniform1i(glGetUniformLocation(this->shadowmapShader, "shadowMap"), 1);
+
 	
-	DrawColoredCube();
+	
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	DrawColoredCube(this->shadowmapShader);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture4);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	DrawColoredCube1(this->shadowmapShader);
 
-	DrawColoredCube1();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture2);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	DrawColoredPlane(this->shadowmapShader);
 
-	DrawColoredPlane();
-
-	DrawColoredClouds();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture5);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	DrawColoredClouds(this->shadowmapShader);
 
 	//DrawColoredSky();
 
@@ -260,17 +307,17 @@ void Demo::BuildColoredCube() {
 
 }
 
-void Demo::DrawColoredCube()
+void Demo::DrawColoredCube(GLuint shader)
 {
-	glUseProgram(shaderProgram);
+	UseShader(shader);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, texture);
+	//glUniform1i(glGetUniformLocation(shader, "ourTexture"), 0);
 	glBindVertexArray(VAO);
 
 	glm::mat4 model;
-	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	GLint modelLoc = glGetUniformLocation(shader, "model");
 	model = glm::translate(model, glm::vec3(0, 0, 0));
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
@@ -389,17 +436,17 @@ void Demo::BuildColoredCube1() {
 
 }
 
-void Demo::DrawColoredCube1()
+void Demo::DrawColoredCube1(GLuint shader)
 {
-	glUseProgram(shaderProgram);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture4);
-	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
+	//glUseProgram(shaderProgram);
+	UseShader(shader);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, texture4);
+	//glUniform1i(glGetUniformLocation(shader, "ourTexture"), 0);
 	glBindVertexArray(VAO4);
 
 	glm::mat4 model;
-	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	GLint modelLoc = glGetUniformLocation(shader, "model");
 	model = glm::translate(model, glm::vec3(0, 0, 0));
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
@@ -519,48 +566,23 @@ void Demo::BuildColoredClouds() {
 
 }
 
-void Demo::DrawColoredClouds()
+void Demo::DrawColoredClouds(GLuint shader)
 {
-	glUseProgram(shaderProgram);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texture5);
-	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
+	//glUseProgram(shaderProgram);
+	UseShader(shader);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, texture5);
+	//glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 0);
 
 	glBindVertexArray(VAO5); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
 	glm::mat4 model;
 	GLint modelLoc;
 	model = glm::translate(model, glm::vec3(0, 0, 0));
-	modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	modelLoc = glGetUniformLocation(shader, "model");
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glm::mat4 ogmodel = model;
 	GLint ogML = modelLoc;
-
-	/*for (int i = -50; i <= 50; i += 5) {
-		model = glm::translate(model, glm::vec3(i, 0, 0));
-
-		//model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
-
-		//model = glm::scale(model, glm::vec3(3, 3, 3));
-
-		modelLoc = glGetUniformLocation(this->shaderProgram, "model");
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-		for (int j = 0; j <= 50; j += 5) {
-			model = glm::translate(model, glm::vec3(-5, 0, -5));
-
-			//model = glm::rotate(model, angle, glm::vec3(0, 1, 0));
-
-			//model = glm::scale(model, glm::vec3(3, 3, 3));
-
-			modelLoc = glGetUniformLocation(this->shaderProgram, "model");
-			glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-			glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-		}
-		model = ogmodel;
-		modelLoc = ogML;
-	}*/
 
 	srand(time(NULL)/10);
 	for (int i = 0; i < 100; i++) {
@@ -572,7 +594,7 @@ void Demo::DrawColoredClouds()
 		//float sz = (rand() % (3 + 1 - -3) + -3);
 		model = glm::translate(model, glm::vec3(x, y, z));
 		//model = glm::scale(model, glm::vec3(sx, sy, sz));
-		modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+		modelLoc = glGetUniformLocation(shader, "model");
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 	}
@@ -640,18 +662,18 @@ void Demo::BuildColoredPlane()
 
 
 
-void Demo::DrawColoredPlane()
+void Demo::DrawColoredPlane(GLuint shader)
 {
-	glUseProgram(shaderProgram);
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, texture2);
-	glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 1);
+	//glUseProgram(shaderProgram);
+	UseShader(shader);
+	//glActiveTexture(GL_TEXTURE1);
+	//glBindTexture(GL_TEXTURE_2D, texture2);
+	//glUniform1i(glGetUniformLocation(this->shaderProgram, "ourTexture"), 1);
 
 	glBindVertexArray(VAO2); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
 	glm::mat4 model;
-	GLint modelLoc = glGetUniformLocation(this->shaderProgram, "model");
+	GLint modelLoc = glGetUniformLocation(shader, "model");
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -767,6 +789,28 @@ void Demo::InitCamera()
 	glfwSetInputMode(this->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
+void Demo::BuildDepthMap() {
+	// configure depth map FBO
+	// -----------------------
+	glGenFramebuffers(1, &depthMapFBO);
+	// create depth texture
+	glGenTextures(1, &depthMap);
+	glBindTexture(GL_TEXTURE_2D, depthMap);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, this->SHADOW_WIDTH, this->SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	// attach depth texture as FBO's depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 void Demo::MoveCamera(float speed)
 {
@@ -804,5 +848,5 @@ void Demo::RotateCamera(float speed)
 
 int main(int argc, char** argv) {
 	RenderEngine &app = Demo();
-	app.Start("Camera: Free Camera Implementation", 800, 600, false, true);
+	app.Start("Mine-o-rama", 800, 600, false, true);
 }

@@ -133,7 +133,11 @@
     <ClInclude Include="RenderEngine.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="depthMap.frag" />
+    <None Include="depthMap.vert" />
     <None Include="fragmentShader.frag" />
+    <None Include="shadowMap.frag" />
+    <None Include="shadowMap.vert" />
     <None Include="vertexShader.vert" />
   </ItemGroup>
   <ItemGroup>

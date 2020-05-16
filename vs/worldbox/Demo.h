@@ -13,8 +13,9 @@ public:
 	Demo();
 	~Demo();
 private:
-	GLuint shaderProgram, VBO, VAO, EBO, texture, VBO2, VAO2, EBO2, texture2, VBO3, VAO3, EBO3, texture3, VBO4, VAO4, EBO4, texture4, VBO5, VAO5, EBO5, texture5;
+	GLuint shaderProgram, depthmapShader, shadowmapShader, VBO, VAO, EBO, texture, VBO2, VAO2, EBO2, texture2, VBO3, VAO3, EBO3, texture3, VBO4, VAO4, EBO4, texture4, VBO5, VAO5, EBO5, texture5, depthMapFBO, depthMap;
 	float viewCamX, viewCamY, viewCamZ, upCamX, upCamY, upCamZ, posCamX, posCamY, posCamZ, CAMERA_SPEED, fovy, angle=0;
+	const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 	virtual void Init();
 	virtual void DeInit();
 	virtual void Update(double deltaTime);
@@ -25,11 +26,12 @@ private:
 	void BuildColoredPlane();
 	void BuildColoredSky();
 	void BuildColoredClouds();
-	void DrawColoredCube();
-	void DrawColoredCube1();
-	void DrawColoredPlane();
+	void DrawColoredCube(GLuint shader);
+	void DrawColoredCube1(GLuint shader);
+	void DrawColoredPlane(GLuint shader);
 	void DrawColoredSky();
-	void DrawColoredClouds();
+	void DrawColoredClouds(GLuint shader);
+	void BuildDepthMap();
 	void MoveCamera(float speed);
 	void StrafeCamera(float speed);
 	void RotateCamera(float speed);
